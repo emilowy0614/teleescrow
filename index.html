@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tele-Escrow</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+body {
+  background-color: #000;
+  color: #fff;
+  font-family: 'Press Start 2P', cursive;
+  text-align: center;
+  padding: 20px;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+/* Matrix background canvas */
+#matrix {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  background: black;
+  display: block;
+}
+
+/* Wszystko na wierzchu canvas */
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+.language-switch {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.language-switch button {
+  background: none;
+  border: 1px dashed white;
+  color: white;
+  font-family: inherit;
+  padding: 5px 10px;
+  margin: 2px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.language-switch button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+h1 {
+  font-size: 24px;
+  margin-bottom: 30px;
+  user-select: none;
+}
+
+.menu-option {
+  margin: 20px auto;
+  padding: 15px;
+  width: 280px;
+  cursor: pointer;
+  transition: all 0.3s;
+  user-select: none;
+  border-top: none;
+  border-bottom: none;
+  border-left: none;
+  border-right: none;
+  color: white;
+  position: relative;
+  display: inline-block;
+}
+
+.menu-option span {
+  display: block;
+  padding: 10px;
+  border-top: 1px dashed white;
+  border-bottom: 1px dashed white;
+  transition: border-color 0.3s, color 0.3s;
+}
+
+.menu-option:hover span {
+  border-top: 1px solid white;
+  border-bottom: 1px solid white;
+  color: white;
+  outline: 2px solid white;
+  outline-offset: 5px;
+}
+
+.hidden {
+  display: none;
+}
+
+input {
+  padding: 10px;
+  width: 250px;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  text-align: center;
+  background: transparent;
+  color: white;
+  border-bottom: 1px dashed white;
+  transition: border-bottom 0.3s;
+}
+
+input:focus {
+  border-bottom: 1px solid white;
+}
+
+button {
+  background: none;
+  border: 1px dashed white;
+  color: white;
+  padding: 10px 20px;
+  margin-top: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+button:hover {
+  background-color: rgba(255,255,255,0.1);
+  border-color: white;
+}
+
+.error {
+  color: #FF5555;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.wallet-address {
+  color: #adff2f;
+  word-break: break-all;
+  margin-top: 10px;
+  user-select: all;
+  font-size: 20px;
+}
+
+.tg-info {
+  margin-top: 15px;
+  font-size: 18px;
+  color: #fff;
+  font-family: 'Press Start 2P', cursive;
+  user-select: text;
+}
+
+.payment-text {
+  font-size: 18px;
+  margin-bottom: 10px;
+  font-family: 'Press Start 2P', cursive;
+  user-select: none;
+}
+
+hr {
+  border: 1px dashed white;
+  margin: 15px 0;
+}
+</style>
+</head>
+<body>
+<canvas id="matrix"></canvas>
+
+<div class="language-switch">
+  <button onclick="switchLanguage('pl')">PL</button>
+  <button onclick="switchLanguage('en')">EN</button>
+</div>
+
+<h1 id="title">Tele-Escrow</h1>
+
+<div id="main-menu">
+  <div class="menu-option" onclick="createCode()">
+    <span id="create-option">Utwórz kod transakcji</span>
+  </div>
+  <div class="menu-option" onclick="joinTransaction()">
+    <span id="join-option">Dołącz do transakcji</span>
+  </div>
+</div>
+
+<div id="create-section" class="hidden">
+  <p id="generated-code"></p>
+  <button onclick="goHome()" id="back-btn">Powrót</button>
+</div>
+
+<div id="join-section" class="hidden">
+  <input type="text" id="transaction-code" placeholder="Wpisz kod transakcji" />
+  <button onclick="validateCode()" id="join-btn">Dołącz</button>
+  <p id="join-error" class="error"></p>
+  <button onclick="goHome()" id="back-btn2">Powrót</button>
+</div>
+
+<div id="payment-section" class="hidden">
+  <p id="payment-text" class="payment-text">Przelej środki na wskazany adres:</p>
+  <p class="wallet-address">0xd281cCD14297Ec2e3F5450b05332f12c0B721a09</p>
+  <p class="tg-info">Przedstaw warunki umowy - TG: @teleescrow0</p>
+  <button onclick="goHome()" id="back-btn3">Powrót</button>
+</div>
+
+<script>
+let generatedCodes = [];
+let currentLang = "pl";
+
+function createCode() {
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+  generatedCodes.push(code);
+  document.getElementById("generated-code").textContent =
+    (currentLang === "pl" ? "Twój kod transakcji: " : "Your transaction code: ") + code;
+  document.getElementById("main-menu").classList.add("hidden");
+  document.getElementById("create-section").classList.remove("hidden");
+  hideMatrix();
+}
+
+function joinTransaction() {
+  document.getElementById("main-menu").classList.add("hidden");
+  document.getElementById("join-section").classList.remove("hidden");
+  hideMatrix();
+}
+
+function validateCode() {
+  const code = document.getElementById("transaction-code").value.toUpperCase();
+  if (generatedCodes.includes(code)) {
+    document.getElementById("join-section").classList.add("hidden");
+    document.getElementById("payment-section").classList.remove("hidden");
+    showMatrix(false);
+  } else {
+    document.getElementById("join-error").textContent =
+      currentLang === "pl" ? "Błędny kod!" : "Invalid code!";
+  }
+}
+
+function goHome() {
+  document.getElementById("create-section").classList.add("hidden");
+  document.getElementById("join-section").classList.add("hidden");
+  document.getElementById("payment-section").classList.add("hidden");
+
+  document.getElementById("main-menu").classList.remove("hidden");
+
+  document.getElementById("transaction-code").value = "";
+  document.getElementById("join-error").textContent = "";
+
+  showMatrix(true);
+}
+
+function switchLanguage(lang) {
+  currentLang = lang;
+  if (lang === "pl") {
+    document.getElementById("title").textContent = "Tele-Escrow";
+    document.getElementById("create-option").textContent = "Utwórz kod transakcji";
+    document.getElementById("join-option").textContent = "Dołącz do transakcji";
+    document.getElementById("back-btn").textContent = "Powrót";
+    document.getElementById("back-btn2").textContent = "Powrót";
+    document.getElementById("back-btn3").textContent = "Powrót";
+    document.getElementById("join-btn").textContent = "Dołącz";
+    document.getElementById("payment-text").textContent = "Przelej środki na wskazany adres:";
+    document.querySelector(".tg-info").textContent = "Przedstaw warunki umowy - TG: @teleescrow0";
+    document.querySelector(".wallet-address").textContent = "0xd281cCD14297Ec2e3F5450b05332f12c0B721a09";
+  } else {
+    document.getElementById("title").textContent = "Tele-Escrow";
+    document.getElementById("create-option").textContent = "Create transaction code";
+    document.getElementById("join-option").textContent = "Join transaction";
+    document.getElementById("back-btn").textContent = "Back";
+    document.getElementById("back-btn2").textContent = "Back";
+    document.getElementById("back-btn3").textContent = "Back";
+    document.getElementById("join-btn").textContent = "Join";
+    document.getElementById("payment-text").textContent = "Transfer funds to the given address:";
+    document.querySelector(".tg-info").textContent = "Present contract terms - TG: @teleescrow0";
+    document.querySelector(".wallet-address").textContent = "0xd281cCD14297Ec2e3F5450b05332f12c0B721a09";
+  }
+}
+
+switchLanguage("pl");
+
+// --------- Matrix animation ---------
+const canvas = document.getElementById("matrix");
+const ctx = canvas.getContext("2d");
+
+let width = window.innerWidth;
+let height = window.innerHeight;
+
+canvas.width = width;
+canvas.height = height;
+
+const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const lettersArray = letters.split("");
+
+const fontSize = 20;
+const columns = Math.floor(width / fontSize);
+const drops = [];
+
+for (let x = 0; x < columns; x++) {
+  drops[x] = Math.random() * -1000;
+}
+
+function drawMatrix() {
+  ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = "white";
+  ctx.font = fontSize + "px 'Press Start 2P'";
+
+  for (let i = 0; i < drops.length; i++) {
+    const text = lettersArray[Math.floor(Math.random() * lettersArray.length)];
+    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+    drops[i] += 0.8;
+
+    if (drops[i] * fontSize > height) {
+      drops[i] = Math.random() * -20;
+    }
+  }
+}
+
+let matrixInterval;
+
+function showMatrix(show) {
+  if (show) {
+    matrixInterval = setInterval(drawMatrix, 40);
+    canvas.style.display = "block";
+  } else {
+    clearInterval(matrixInterval);
+    ctx.clearRect(0, 0, width, height);
+    canvas.style.display = "none";
+  }
+}
+
+function hideMatrix() {
+  showMatrix(false);
+}
+
+window.addEventListener("resize", () => {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  canvas.width = width;
+  canvas.height = height;
+});
+
+showMatrix(true);
+</script>
+</body>
+</html>
